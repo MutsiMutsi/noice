@@ -1,0 +1,201 @@
+#video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+#remoteVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: black;
+    /* Scales video to fill container while maintaining aspect ratio */
+}
+
+#myVideo {
+    position: absolute;
+    top: 32px;
+    right: 32px;
+    width: 20%;
+    max-width: 320px;
+    /* Adjust width and height as desired */
+    object-fit: cover;
+}
+
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ddd;
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+
+.popup span {
+    color: #333;
+    font-weight: bold;
+}
+
+#bandwidthLabel {
+    position: absolute;
+    top: 0px;
+    font-family: monospace;
+    background: #ffffffaa;
+    width: 240px;
+    height: auto;
+    margin: 11px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.caller-name {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+#accept-call {
+    border: 1px solid #79c26d;
+}
+
+#deny-call {
+    border: 1px solid #c26d6d;
+}
+
+.caller-name {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.call-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.blur {
+    -webkit-filter: blur(5px);
+    -moz-filter: blur(5px);
+    -o-filter: blur(5px);
+    -ms-filter: blur(5px);
+    filter: blur(5px);
+}
+
+.video-overlay {
+    position: absolute;
+    bottom: 28px; /* Position at bottom of video */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Center horizontally with offset */
+    color: white; /* Text color */
+    padding: 10px; /* Padding for content */
+}
+
+.video-overlay {
+    opacity: 0; /* Initially hidden */
+    transition: opacity 0.5s ease-in-out; /* Transition for opacity */
+}
+
+.video-overlay.show {
+    display: block;
+    opacity: 1; /* Fade in to 50% opacity */
+}
+
+.video-overlay.hide {
+    display: none;
+    opacity: 0; /* Fade out to 0% opacity before hiding */
+}
+
+#messages {
+    position: absolute;
+    bottom: 92px;
+    right: 32px;
+    transform: translate(0%, 0%);
+    width: 25%;
+}
+.message {
+    padding: 4px 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.6);
+    position: relative;
+    width: fit-content;
+}
+
+.message.sent {
+    background-color: rgba(150, 255, 150, 0.6);
+    margin-left: auto;
+    margin-right: 0px;
+}
+
+#input-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    position: absolute;
+    bottom: 32px;
+    right: 32px;
+    width: 25%;
+}
+#message-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 4px 10px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+#send-button {
+    background-color: #4caf50; /* Green */
+    border: none;
+    color: white;
+    padding: 0px 16px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin-left: 10px;
+    cursor: pointer;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+@media (orientation: portrait) {
+    #messages {
+        width: 70%;
+        bottom: 92px;
+    }
+
+    #input-container {
+        width: 70%;
+        bottom: 36px;
+    }
+
+    .video-overlay {
+        opacity: 1;
+        display: flex;
+        scale: 0.75;
+        display: inline-grid;
+        position: absolute;
+        bottom: 16px;
+        left: 32px;
+    }
+
+    .video-overlay.show {
+        display: inline-grid;
+        opacity: 1;
+    }
+}

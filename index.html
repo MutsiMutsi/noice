@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Noice</title>
+    <meta name="description" content="NKN Noice">
+    <meta name="author" content="Mutsi">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link href="https://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+    <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link rel="stylesheet" href="./css/normalize.css">
+    <link rel="stylesheet" href="./css/skeleton.css">
+    <link rel="stylesheet" href="./css/style.css">
+
+    <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link rel="icon" type="image/png" href="images/favicon.png">
+
+
+    <link href="./lib/video-js.css" rel="stylesheet" />
+
+    <div class="container">
+        <section class="header" style="margin-top: 180px;">
+            <h2 class="title">Noice - communication without complication.</h2>
+        </section>
+
+        <div class="docs-section" id="intro">
+            <label for="yourId">Your ID</label>
+            <input class="u-full-width" readonly id="yourId" type="text" autocomplete="off">
+
+            <label for="remoteId">Enter remote ID</label>
+            <input class="u-full-width" id="remoteId" type="text" autocomplete="off">
+            <button type="submit" id="callBtnVoice"><img src="./svg/mic.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Dial Voice</button>
+            <button type="submit" id="callBtnVideo"><img src="./svg/video.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Dial Video</button>
+        </div>
+    </div>
+
+    <div id="video-container" style="display: none;">
+        <video id="remoteVideo" class="video-js" controls autoplay data-setup='{"liveui": true}'></video>
+        <video id="myVideo" controls muted autoplay style="border-radius: 16px;"></video>
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="message-input" placeholder="Type your message" autocomplete="off">
+            <button id="send-button">></button>
+        </div>
+        <div class="video-overlay">
+            <button id="toggle-audio" style="background-color: white; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/mic.svg" style="margin-top: 5px; margin-left: -11px;"></button>
+            <button id="toggle-video" style="background-color: white; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/video.svg" style="margin-top: 5px; margin-left: -11px;"></button>
+            <button id="end-call" style="background-color: #ff4545; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/phone.svg" style="margin-top: 5px; margin-left: -11px; transform: rotateZ(135deg);"></button>
+        </div>
+    </div>
+
+    <p id='bandwidthLabel'></p>
+
+    <div id="hide-panel" style="opacity: 0.8; position: absolute; top: 0%; width: 100vw; height: 100vh; background-color: rgb(255, 255, 255);"></div>
+
+    <div class="call-popup" id="connection-indicator">
+        <span id="connection-label">Connecting to the NKN network</span>
+        <br>
+        <span id="subclients-connected">initiating...</span>
+        <hr>
+        <button id="lets-go-button" disabled>Please Wait</button>
+    </div>
+
+    <div class="call-popup" id="outgoing-call-indicator" style="display: none;">
+        <div class="caller-name">Calling...</div>
+        <span id="dialing-id"></span>
+        <hr>
+        <div>
+            <button id="cancel-call">Cancel</button>
+        </div>
+    </div>
+
+    <div class="call-popup" id="incoming-call-indicator" style="display: none;">
+        <div id="incoming-call-title" class="caller-name">Incoming Call</div>
+        <span id="caller-id"></span>
+        <hr>
+        <div class="buttons">
+            <button id="accept-call">Accept</button>
+            <button id="deny-call">Deny</button>
+        </div>
+    </div>
+</head>
+
+<body>
+    <script src="./lib/nkn.js"></script>
+    <script src="./js/util.js"></script>
+    <script src="./lib/video.min.js"></script>
+
+    <script>
+        let mediaSource;
+        let sourceBuffer;
+        const remoteElement = document.getElementById('remoteVideo');
+
+        function setupRemoteVideo(codec) {
+            if ("MediaSource" in window && MediaSource.isTypeSupported(codec)) {
+                mediaSource = new MediaSource();
+                console.log(mediaSource.readyState); // closed
+                remoteElement.src = URL.createObjectURL(mediaSource);
+                mediaSource.addEventListener("sourceopen", sourceOpen);
+            } else {
+                alert("Unsupported MIME type or codec: ", codec);
+            }
+
+            function sourceOpen() {
+                console.log(this.readyState); // open
+                sourceBuffer = mediaSource.addSourceBuffer(codec);
+                //sourceBuffer.mode = 'sequence';
+                videojs.players.remoteVideo.liveTracker.options().liveTolerance = 2.0;
+            }
+        }
+    </script>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
