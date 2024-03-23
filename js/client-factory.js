@@ -1,3 +1,5 @@
+import { Utility } from "./util.js";
+
 export default class ClientFactory {
     constructor(numClients) {
         this.numSubClients = numClients;
@@ -37,14 +39,14 @@ export default class ClientFactory {
         }
 
         while (connectedNodes + failedNodes < this.targetClients) {
-            await sleep(50);
+            await Utility.sleep(50);
         }
 
 
         if (connectedNodes >= this.numSubClients) {
             return client;
         } else {
-            await sleep(1000);
+            await Utility.sleep(1000);
             this.targetClients += failedNodes;
             console.log('try again:', this.targetClients);
             return this.setup(this.targetClients);

@@ -1,3 +1,4 @@
+import { Semaphore } from "./util.js";
 
 const SEQUENCE_NUMBER_BYTE_LENGTH = 4; // Number of bytes used for sequence number
 
@@ -115,7 +116,7 @@ export default class StreamHandler {
 
     async stop() {
         await this.semaphoreSend.acquire();
-        await this.semaphoreRead.acquire(); 
+        await this.semaphoreRead.acquire();
 
         this.cachedChunks = {};
         this.expectedSequenceNumber = 0;

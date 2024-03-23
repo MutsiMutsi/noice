@@ -1,3 +1,5 @@
+import { MovingByteRate, Utility } from "./util.js";
+
 export default class DebugPanel {
 
     bytesReadMA = new MovingByteRate(1);
@@ -33,8 +35,8 @@ export default class DebugPanel {
     updateDebugLabel() {
         let behindTime = videojs.players.remoteVideo.liveTracker.seekableEnd() - videojs.players.remoteVideo.currentTime();
 
-        let str = `DOWN: [${this.downChunks}] ${humanFileSize(this.bytesRead, true, 1)} ${(humanFileSize(this.bytesReadMA.getByteRate(), true, 1))}/s
-                UP: [${this.upChunks}] ${humanFileSize(this.bytesWritten, true, 1)} ${(humanFileSize(this.bytesWrittenMA.getByteRate(), true, 1))}/s
+        let str = `DOWN: [${this.downChunks}] ${Utility.humanFileSize(this.bytesRead, true, 1)} ${(Utility.humanFileSize(this.bytesReadMA.getByteRate(), true, 1))}/s
+                UP: [${this.upChunks}] ${Utility.humanFileSize(this.bytesWritten, true, 1)} ${(Utility.humanFileSize(this.bytesWrittenMA.getByteRate(), true, 1))}/s
                 DROPPED CHUNKS: ${this.droppedChunks}
                 OUT OF SEQUENCE CHUNKS: ${this.outOfSequenceChunks}
                 BUFFER TIME: ${(behindTime).toFixed(2)}s

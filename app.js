@@ -1,3 +1,7 @@
+import "./lib/nkn.js";
+import "./lib/video.min.js";
+import { Utility } from "./js/util.js";
+
 import ClientFactory from "./js/client-factory.js";
 import MimeCodec from "./js/mimecodec.js";
 import TextChat from "./js/text-chat.js";
@@ -234,7 +238,7 @@ import StreamHandler from "./js/stream-handler.js";
                 });
 
                 const timeoutPromise = new Promise(async (resolve) => {
-                    await sleep(30000);
+                    await Utility.sleep(30000);
                     resolve('dial_timeout');
                 });
 
