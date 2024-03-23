@@ -1,9 +1,10 @@
 import ClientFactory from "./js/client-factory.js";
 import MimeCodec from "./js/mimecodec.js";
-import MediaRecorderStream from "./js/media-recorder-stream.js";
 import TextChat from "./js/text-chat.js";
 import ClientMessages from "./js/client-messages.js";
 import DebugPanel from "./js/debug-panel.js";
+import UserMedia from "./js/user-media.js";
+import StreamHandler from "./js/stream-handler.js";
 
 (async () => {
 
@@ -16,26 +17,14 @@ import DebugPanel from "./js/debug-panel.js";
     const cancelCallButton = document.getElementById('cancel-call');
     const toggleVideoBtn = document.getElementById('toggle-video');
     const toggleaudioBtn = document.getElementById('toggle-audio');
+    const debugPanel = new DebugPanel();
 
-    let mediaRecorder = new MediaRecorderStream();
     let localCodec = new MimeCodec().getVideoCodec();
     let remoteCodec = '';
-
-    const semaphore = new Semaphore(1);
-    const semaphoreRead = new Semaphore(1);
-    const reader = new FileReader(); // Create a single FileReader instance
-
     let remoteAddr = '';
 
-    let currentSequenceNumber = 0;
-    const sequenceNumberBytes = 4; // Number of bytes used for sequence number
-    let cachedChunks = {};
-    let expectedSequenceNumber = 0;
 
     const numSubClients = 4;
-
-    let videoTrack;
-    let audioTrack;
     let videoEnabled = false;
     let isInCall = false;
 
@@ -49,13 +38,14 @@ import DebugPanel from "./js/debug-panel.js";
     const client = await clientFactory.setup();
     onClientConnect();
 
+    let usermedia = new UserMedia(videoElement, localCodec);
+    let streamHandler = new StreamHandler(client, debugPanel);
+
     let clientMessages = new ClientMessages(client);
     clientMessages.onCallAccepted = onDialAccepted;
     clientMessages.onCallDenied = onDialDenied;
 
-    const debugPanel = new DebugPanel();
 
-    let timeslice = 50;
     let rtt = 0;
 
     const ringtoneAudio = new Audio('./audio/ringtone.mp3');
@@ -121,28 +111,9 @@ import DebugPanel from "./js/debug-panel.js";
         connectedAudio.play();
 
         videoContainer.style.display = 'block';
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            //navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-            .then(function (stream) {
-                videoElement.srcObject = stream;
-                mediaRecorder.setup(stream, 100000, localCodec);
-                mediaRecorder.start(timeslice, async (event) => {
-                    const recordedBlob = event.data; // This is the binary data chunk
-
-                    // Send the recordedBlob to your server using XHR or Fetch API (explained later)
-                    await sendToServer(recordedBlob);
-                });
-
-                currentSequenceNumber = 0;
-                videoTrack = stream.getTracks().find(track => track.kind === 'video');
-                audioTrack = stream.getTracks().find(track => track.kind === 'audio');
-
-                videoTrack.enabled = videoEnabled;
-            })
-            .catch(function (error) {
-                console.error("Error accessing media devices:", error);
-                alert(`Error accessing media devices: ${error}`);
-            });
+        usermedia.startWebcam(videoEnabled, (blob, sequenceNumber) => {
+            streamHandler.send(remoteAddr, blob, sequenceNumber);
+        });
     }
 
     let speedChangeCount = 0;
@@ -176,8 +147,8 @@ import DebugPanel from "./js/debug-panel.js";
 
                     let behindTime = videojs.players.remoteVideo.liveTracker.seekableEnd() - videojs.players.remoteVideo.currentTime();
                     let rttSeconds = rtt / 1000.0;
-                    if (rttSeconds < timeslice / 250.0) {
-                        rttSeconds = timeslice / 250.0;
+                    if (rttSeconds < usermedia.timeslice / 250.0) {
+                        rttSeconds = usermedia.timeslice / 250.0;
                     }
 
                     if (behindTime < rttSeconds) {
@@ -197,7 +168,7 @@ import DebugPanel from "./js/debug-panel.js";
                         speedChangeCount++;
                     }
                     else {
-                        videojs('remoteVideo').currentTime(videojs('remoteVideo').liveTracker.seekableEnd() - (timeslice / 1000))
+                        videojs('remoteVideo').currentTime(videojs('remoteVideo').liveTracker.seekableEnd() - (usermedia.timeslice / 1000))
                         console.warn('skip');
                     }
                 }
@@ -208,70 +179,12 @@ import DebugPanel from "./js/debug-panel.js";
     //listen for messages
     client.onMessage(async ({ src, payload }) => {
         if (payload instanceof Uint8Array) {
-            await semaphoreRead.acquire(); // Acquire semaphore before processing
-            try {
-                if (remoteAddr != src) {
-                    return;
-                }
 
-                debugPanel.addDown(payload.byteLength);
-
-                var arrayBuffer = payload.buffer.slice(payload.byteOffset, payload.byteLength + payload.byteOffset);
-                const sequenceNumber = new DataView(arrayBuffer, 0, sequenceNumberBytes).getUint32(0);
-
-                if (sequenceNumber == 0) {
-                    sourceBuffer = undefined;
-                    cachedChunks = {};
-                    expectedSequenceNumber = 0;
-
-                    setupRemoteVideo(remoteCodec);
-                }
-
-                let tryCount = 0;
-                while (sourceBuffer == undefined) {
-                    await sleep(10);
-                    tryCount++;
-                    if (tryCount == 100) {
-                        setupRemoteVideo(remoteCodec);
-                        tryCount = 0;
-                        console.warn('retrying to create remote video buffer');
-                    }
-                }
-
-                // Extract the media chunk data
-                const chunkData = new Uint8Array(payload.byteLength - sequenceNumberBytes);
-                chunkData.set(payload.slice(sequenceNumberBytes));
-
-                if (sequenceNumber - expectedSequenceNumber > 10) {
-                    expectedSequenceNumber++;
-                    // Process any cached chunks in sequence
-                    while (cachedChunks[expectedSequenceNumber]) {
-                        await handleChunk(cachedChunks[expectedSequenceNumber]);
-                        delete cachedChunks[expectedSequenceNumber];
-                        expectedSequenceNumber++;
-                    }
-                    remoteElement.currentTime = 9999999;
-                    debugPanel.droppedChunks++;
-                    updateDebugLabel();
-                }
-
-                if (sequenceNumber === expectedSequenceNumber) {
-                    await handleChunk(chunkData);
-                    expectedSequenceNumber++;
-
-                    // Process any cached chunks in sequence
-                    while (cachedChunks[expectedSequenceNumber]) {
-                        await handleChunk(cachedChunks[expectedSequenceNumber]);
-                        delete cachedChunks[expectedSequenceNumber];
-                        expectedSequenceNumber++;
-                    }
-                } else {
-                    debugPanel.outOfSequenceChunks++;
-                    cachedChunks[sequenceNumber] = chunkData;
-                }
-            } finally {
-                semaphoreRead.release();
+            if (remoteAddr != src) {
+                return;
             }
+
+            streamHandler.receive(payload, remoteCodec);
         } else {
 
             if (payload == 'rtt') {
@@ -346,56 +259,6 @@ import DebugPanel from "./js/debug-panel.js";
         });
 
 
-    async function sendToServer(blob) {
-        await semaphore.acquire();
-        try {
-            reader.readAsArrayBuffer(blob);
-
-            await new Promise((resolve, reject) => {
-                reader.onload = function (e) {
-                    resolve(e.target.result);
-                };
-                reader.onerror = function (error) {
-                    reject(error);
-                };
-            });
-
-            const chunkData = new Uint8Array(reader.result);
-            const sequenceNumberBytes = new Uint8Array(4); // Adjust byte size for sequence number range
-            new DataView(sequenceNumberBytes.buffer).setUint32(0, currentSequenceNumber);
-
-            const chunkWithSequenceNumber = new Uint8Array(sequenceNumberBytes.byteLength + chunkData.byteLength);
-            chunkWithSequenceNumber.set(sequenceNumberBytes);
-            chunkWithSequenceNumber.set(chunkData, sequenceNumberBytes.byteLength);
-
-            await client.send(remoteAddr, chunkWithSequenceNumber, { noReply: true });
-            currentSequenceNumber++;
-
-            debugPanel.addUp(reader.result.byteLength);
-        } finally {
-            semaphore.release(); // Release semaphore after all steps complete
-        }
-    }
-
-
-    async function handleChunk(chunk) {
-        var copyBuffer = new ArrayBuffer(chunk.byteLength);
-        new Uint8Array(copyBuffer).set(new Uint8Array(chunk));
-        sourceBuffer.appendBuffer(copyBuffer);
-
-        while (true) {
-            if (!sourceBuffer.updating) break
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-
-        var isPlaying = remoteElement.currentTime > 0 && !remoteElement.paused && !remoteElement.ended
-            && remoteElement.readyState > remoteElement.HAVE_CURRENT_DATA;
-
-        if (!isPlaying) {
-            remoteElement.play();
-        }
-    }
-
     const videoOverlay = document.querySelector('.video-overlay');
     let timeoutId = null; // Variable to store the timeout identifier
 
@@ -415,8 +278,8 @@ import DebugPanel from "./js/debug-panel.js";
     });
 
     toggleVideoBtn.onclick = () => {
-        videoTrack.enabled = !videoTrack.enabled;
-        if (videoTrack.enabled) {
+        usermedia.videoTrack.enabled = !usermedia.videoTrack.enabled;
+        if (usermedia.videoTrack.enabled) {
             toggleVideoBtn.children[0].src = "./svg/video.svg";
         } else {
             toggleVideoBtn.children[0].src = "./svg/video-off.svg";
@@ -424,8 +287,8 @@ import DebugPanel from "./js/debug-panel.js";
     };
 
     toggleaudioBtn.onclick = () => {
-        audioTrack.enabled = !audioTrack.enabled;
-        if (audioTrack.enabled) {
+        usermedia.audioTrack.enabled = !usermedia.audioTrack.enabled;
+        if (usermedia.audioTrack.enabled) {
             toggleaudioBtn.children[0].src = "./svg/mic.svg";
         } else {
             toggleaudioBtn.children[0].src = "./svg/mic-off.svg";
@@ -436,14 +299,11 @@ import DebugPanel from "./js/debug-panel.js";
         endCall();
     };
 
-    function endCall() {
+    async function endCall() {
         isInCall = false;
-        mediaRecorder.stop();
 
-        videoTrack.stop();
-        audioTrack.stop();
-        videoElement.pause();
-        videoElement.src = "";
+        await usermedia.stop();
+        await streamHandler.stop();
 
         if (remoteAddr != '') {
             disconnectedAudio.play();

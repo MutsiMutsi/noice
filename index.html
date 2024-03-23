@@ -95,25 +95,29 @@
 
     <script>
         let mediaSource;
-        let sourceBuffer;
         const remoteElement = document.getElementById('remoteVideo');
 
         function setupRemoteVideo(codec) {
-            if ("MediaSource" in window && MediaSource.isTypeSupported(codec)) {
-                mediaSource = new MediaSource();
-                console.log(mediaSource.readyState); // closed
-                remoteElement.src = URL.createObjectURL(mediaSource);
-                mediaSource.addEventListener("sourceopen", sourceOpen);
-            } else {
-                alert("Unsupported MIME type or codec: ", codec);
-            }
+            return new Promise((resolve, reject) => {
+                if ("MediaSource" in window && MediaSource.isTypeSupported(codec)) {
+                    mediaSource = new MediaSource();
+                    console.log(mediaSource.readyState); // closed
+                    remoteElement.src = URL.createObjectURL(mediaSource);
+                    mediaSource.addEventListener("sourceopen", sourceOpen);
+                } else {
+                    alert("Unsupported MIME type or codec: ", codec);
+                    reject("Unsupported MIME type or codec: ", codec);
+                }
 
-            function sourceOpen() {
-                console.log(this.readyState); // open
-                sourceBuffer = mediaSource.addSourceBuffer(codec);
-                //sourceBuffer.mode = 'sequence';
-                videojs.players.remoteVideo.liveTracker.options().liveTolerance = 2.0;
-            }
+                function sourceOpen() {
+                    console.log(this.readyState); // open
+                    sourceBuffer = mediaSource.addSourceBuffer(codec);
+                    //sourceBuffer.mode = 'sequence';
+                    videojs.players.remoteVideo.liveTracker.options().liveTolerance = 2.0;
+                    return resolve(sourceBuffer);
+                }
+            })
+
         }
     </script>
 
