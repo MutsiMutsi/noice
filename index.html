@@ -52,6 +52,7 @@
         <div class="video-overlay">
             <button id="toggle-audio" style="background-color: white; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/mic.svg" style="margin-top: 5px; margin-left: -11px;"></button>
             <button id="toggle-video" style="background-color: white; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/video.svg" style="margin-top: 5px; margin-left: -11px;"></button>
+            <button id="toggle-screenshare" style="background-color: white; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/monitor.svg" style="margin-top: 5px; margin-left: -11px;"></button>
             <button id="end-call" style="background-color: #ff4545; opacity: 0.5; width: 0px; border-radius: 16px;"><img src="./svg/phone.svg" style="margin-top: 5px; margin-left: -11px; transform: rotateZ(135deg);"></button>
         </div>
     </div>
@@ -91,14 +92,13 @@
 <body>
     <script>
         let mediaSource;
-        const remoteElement = document.getElementById('remoteVideo');
+        const videoRemoteElement = document.getElementById('remoteVideo');
 
         function setupRemoteVideo(codec) {
             return new Promise((resolve, reject) => {
                 if ("MediaSource" in window && MediaSource.isTypeSupported(codec)) {
                     mediaSource = new MediaSource();
-                    console.log(mediaSource.readyState); // closed
-                    remoteElement.src = URL.createObjectURL(mediaSource);
+                    videoRemoteElement.src = URL.createObjectURL(mediaSource);
                     mediaSource.addEventListener("sourceopen", sourceOpen);
                 } else {
                     alert("Unsupported MIME type or codec: ", codec);
@@ -106,9 +106,7 @@
                 }
 
                 function sourceOpen() {
-                    console.log(this.readyState); // open
                     sourceBuffer = mediaSource.addSourceBuffer(codec);
-                    //sourceBuffer.mode = 'sequence';
                     videojs.players.remoteVideo.liveTracker.options().liveTolerance = 2.0;
                     return resolve(sourceBuffer);
                 }

@@ -1,4 +1,4 @@
-import { Semaphore } from "./util.js";
+import { Semaphore, Utility } from "./util.js";
 
 const SEQUENCE_NUMBER_BYTE_LENGTH = 4; // Number of bytes used for sequence number
 
@@ -17,6 +17,8 @@ export default class StreamHandler {
     }
 
     async receive(payload, codec) {
+        this.lastUsedCodec = codec;
+
         await this.semaphoreRead.acquire(); // Acquire semaphore before processing
         try {
 
@@ -29,6 +31,8 @@ export default class StreamHandler {
                 this.sourceBuffer = await setupRemoteVideo(codec);
                 this.cachedChunks = {};
                 this.expectedSequenceNumber = 0;
+
+                this.chunkZero = payload;
             }
 
             // Extract the media chunk data
@@ -43,7 +47,7 @@ export default class StreamHandler {
                     delete this.cachedChunks[this.expectedSequenceNumber];
                     this.expectedSequenceNumber++;
                 }
-                remoteElement.currentTime = 9999999;
+                videoRemoteElement.currentTime = 9999999;
                 this.debugPanel.droppedChunks++;
                 this.debugPanel.updateDebugLabel();
             }
@@ -68,20 +72,29 @@ export default class StreamHandler {
     }
 
     async handleChunk(chunk) {
-        var copyBuffer = new ArrayBuffer(chunk.byteLength);
-        new Uint8Array(copyBuffer).set(new Uint8Array(chunk));
-        this.sourceBuffer.appendBuffer(copyBuffer);
+
+        this.sourceBuffer.appendBuffer(chunk);
 
         while (true) {
             if (!this.sourceBuffer.updating) break
-            await new Promise(resolve => setTimeout(resolve, 5));
+            await Utility.sleep(5);
         }
 
-        var isPlaying = remoteElement.currentTime > 0 && !remoteElement.paused && !remoteElement.ended
-            && remoteElement.readyState > remoteElement.HAVE_CURRENT_DATA;
+        //Check for errors:
+        if (videoRemoteElement.error != null) {
+            //TODO: research better more consisten ways to recover from dropped chunks
+            //or joining streams midway-through.
+            const lastTime = videoRemoteElement.currentTime;
+            this.sourceBuffer = await setupRemoteVideo(this.lastUsedCodec);
+            videoRemoteElement.currentTime = lastTime;
+        }
+        else {
+            var isPlaying = videoRemoteElement.currentTime > 0 && !videoRemoteElement.paused && !videoRemoteElement.ended
+                && videoRemoteElement.readyState > videoRemoteElement.HAVE_CURRENT_DATA;
 
-        if (!isPlaying) {
-            remoteElement.play();
+            if (!isPlaying) {
+                videoRemoteElement.play();
+            }
         }
     }
 
@@ -99,9 +112,15 @@ export default class StreamHandler {
                 };
             });
 
-            const chunkData = new Uint8Array(this.reader.result);
+            let chunkData = new Uint8Array(this.reader.result);
             const sequenceNumberBytes = new Uint8Array(SEQUENCE_NUMBER_BYTE_LENGTH); // Adjust byte size for sequence number range
             new DataView(sequenceNumberBytes.buffer).setUint32(0, sequenceNumber);
+
+            //FORCE DROP RANDOM CHUNKS FOR RESILIENCY TESTING
+            /*if (sequenceNumber == 10 || Math.random() < 0.01) {
+                console.warn("DROPPING THIS CHUNK");
+                return;
+            }*/
 
             const chunkWithSequenceNumber = new Uint8Array(SEQUENCE_NUMBER_BYTE_LENGTH + chunkData.byteLength);
             chunkWithSequenceNumber.set(sequenceNumberBytes);
