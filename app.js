@@ -14,7 +14,7 @@ import UI from "./js/ui.js";
 
     const videoLocalElement = document.getElementById('myVideo');
     const debugPanel = new DebugPanel();
-    const userinterface = new UI(Call);
+    const userinterface = new UI(Call, broadcastStream, watchStream);
     const numSubClients = 4;
 
     let localCodec = new MimeCodec().getVideoCodec();
@@ -80,6 +80,13 @@ import UI from "./js/ui.js";
         usermedia.startWebcam(videoEnabled, (blob, sequenceNumber) => {
             streamHandler.send(remoteAddr, blob, sequenceNumber);
         });
+    }
+
+    function broadcastStream() {
+        usermedia.timeslice = 1000;
+        usermedia.startWebcam(true, (blob, sequenceNumber) => {
+            streamHandler.publish('noice', blob, sequenceNumber);
+        }, 200000);
     }
 
     let speedChangeCount = 0;
@@ -178,6 +185,8 @@ import UI from "./js/ui.js";
                 return JSON.stringify({ type: callResult, codec: localCodec });
             } else if (obj.type == 'text') {
                 textChat.addMessage(obj.content, false);
+            } else if (obj.type == 'broadcastInitRequest') {
+                return streamHandler.initializationBuffer;
             }
         }
     });
@@ -208,6 +217,21 @@ import UI from "./js/ui.js";
         }
 
         remoteAddr = '';
+    }
+
+    async function watchStream() {
+        remoteCodec = 'video/webm;codecs=vp9,opus';
+        remoteAddr = document.getElementById('remoteId').value.trim();
+        const initialBuffer = await clientMessages.requestBroadcastInitialization(remoteAddr);
+        streamHandler.sourceBuffer = await setupRemoteVideo(remoteCodec);
+        await streamHandler.handleChunk(initialBuffer, false);
+        videoRemoteElement.currentTarget = 999999999;
+
+        let wallet = new nkn.Wallet({
+            seed: client.key.seed,
+        });
+        streamHandler.expectedSequenceNumber = -1;
+        await wallet.subscribe('noice', 100);
     }
 })();
 

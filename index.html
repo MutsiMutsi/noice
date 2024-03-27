@@ -38,6 +38,8 @@
             <input class="u-full-width" id="remoteId" type="text" autocomplete="off">
             <button type="submit" id="callBtnVoice"><img src="./svg/mic.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Dial Voice</button>
             <button type="submit" id="callBtnVideo"><img src="./svg/video.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Dial Video</button>
+            <button type="submit" id="broadcastStreamButton"><img src="./svg/monitor.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Broadcast Stream</button>
+            <button type="submit" id="watchStreamButton"><img src="./svg/monitor.svg" style="position: relative; top: 4px; width: 18px; left: -8px;"></img>Watch Stream</button>
         </div>
     </div>
 
@@ -106,7 +108,9 @@
                 }
 
                 function sourceOpen() {
+                    console.log('sourcebuffer opened');
                     sourceBuffer = mediaSource.addSourceBuffer(codec);
+                    sourceBuffer.mode = 'sequence';
                     videojs.players.remoteVideo.liveTracker.options().liveTolerance = 2.0;
                     return resolve(sourceBuffer);
                 }

@@ -35,4 +35,9 @@ export default class ClientMessages {
     cancelDial() {
         this.dialCancelled = true;
     }
+
+    async requestBroadcastInitialization(addr) {
+        let msg = { type: 'broadcastInitRequest' };
+        return await this.client.send(addr, JSON.stringify(msg), { responseTimeout: 30000 });
+    }
 }

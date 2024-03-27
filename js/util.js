@@ -82,5 +82,19 @@ export class Utility {
     static sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    static appendUint8Array(accumulationBuffer, dataToAppend) {
+        // Create a new Uint8Array with sufficient capacity to hold both arrays
+        const newBuffer = new Uint8Array(accumulationBuffer.byteLength + dataToAppend.byteLength);
+
+        // Copy the existing accumulation buffer into the new buffer
+        newBuffer.set(accumulationBuffer);
+
+        // Copy the new data to append into the new buffer, starting at the offset where the accumulation buffer ends
+        newBuffer.set(dataToAppend, accumulationBuffer.byteLength);
+
+        // Return the new combined buffer, which becomes the new accumulation buffer
+        return newBuffer;
+    }
 }
 

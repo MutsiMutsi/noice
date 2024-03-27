@@ -1,7 +1,7 @@
 import { Utility } from "./util.js";
 
 export default class UI {
-    constructor(callFunc) {
+    constructor(callFunc, broadcastStreamFunc, watchStreamFunc) {
         //video container
         this.videoContainer = document.getElementById('video-container');
 
@@ -35,6 +35,20 @@ export default class UI {
 
         document.getElementById('callBtnVideo').onclick = () => {
             callFunc(true);
+        };
+
+        document.getElementById('broadcastStreamButton').onclick = () => {
+            this.videoContainer.style.display = 'block';
+            document.getElementById('hide-panel').style.display = 'none';
+            document.getElementById('outgoing-call-indicator').style.display = 'none';
+            broadcastStreamFunc();
+        };
+
+        document.getElementById('watchStreamButton').onclick = () => {
+            this.videoContainer.style.display = 'block';
+            document.getElementById('hide-panel').style.display = 'none';
+            document.getElementById('outgoing-call-indicator').style.display = 'none';
+            watchStreamFunc();
         };
     }
 

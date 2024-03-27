@@ -20,13 +20,13 @@ export default class UserMedia {
         this.recorder = new MediaRecorderStream();
     }
 
-    async startWebcam(videoEnabled, onData) {
+    async startWebcam(videoEnabled, onData, quality = 100000) {
         this.sequenceNumber = -1;
 
         try {
             this.webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             this.videoElement.srcObject = this.webcamStream;
-            this.recorder.setup(this.webcamStream, 100000, this.codec);
+            this.recorder.setup(this.webcamStream, quality, this.codec);
             this.recorder.start(this.timeslice, async (event) => {
                 const recordedBlob = event.data; // This is the binary data chunk
 
@@ -67,7 +67,7 @@ export default class UserMedia {
                 this.recorder.mediaRecorder.stream.addTrack(this.mixAudioTrack);
             }
 
-            this.recorder.mediaRecorder.start(50);
+            this.recorder.mediaRecorder.start(this.timeslice);
             this.isScreensharing = true;
 
         } catch (error) {
